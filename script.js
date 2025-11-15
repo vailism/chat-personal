@@ -4,6 +4,8 @@ let spotifyAccessToken = null;
 let spotifyRefreshToken = null;
 let spotifyExpiresAt = 0;
 
+const API_BASE = (document.querySelector('meta[name="api-base"]')?.content || '').trim() || '';
+
 window.addEventListener('load', () => {
   setTimeout(() => {
     document.getElementById('loading-screen').classList.add('hidden');
@@ -23,7 +25,7 @@ function handleSpotifyRedirect(){
 async function exchangeSpotifyCode(code){
   try{
     toast('Connecting Spotify...','success');
-    const response = await fetch('/spotify-auth', {
+    const response = await fetch((API_BASE||'') + '/spotify-auth', {
       method:'POST',
       headers:{'Content-Type':'application/json'},
       body:JSON.stringify({ code }) // server derives redirect_uri
@@ -46,7 +48,7 @@ async function exchangeSpotifyCode(code){
 async function refreshSpotifyToken(){
   if(!spotifyRefreshToken) return;
   try{
-    const res = await fetch('/spotify-refresh',{
+    const res = await fetch((API_BASE||'') + '/spotify-refresh',{
       method:'POST',
       headers:{'Content-Type':'application/json'},
       body:JSON.stringify({ refresh_token: spotifyRefreshToken })
@@ -142,7 +144,7 @@ input.addEventListener('keydown', (e) => {
 const spotifyLoginBtn = document.getElementById('spotify-login-btn');
 if(spotifyLoginBtn){
   spotifyLoginBtn.addEventListener('click', () => {
-    window.location.href = '/spotify-login';
+    window.location.href = (API_BASE||'') + '/spotify-login';
   });
 }
 
@@ -194,14 +196,13 @@ async function callAPI(prompt) {
   const sendBtn = document.getElementById('send-btn');
   sendBtn.classList.add('sending');
 
-  const url = '/chat';
+  const url = (API_BASE||'') + '/chat';
   const payload = { prompt };
 
   try {
     const headers = { 'Content-Type': 'application/json' };
     let response = await fetch(url, { method: 'POST', headers, body: JSON.stringify(payload) });
     if (response.status === 405) {
-      // Fallback to GET for hosts that block POST on static backends
       response = await fetch(`${url}?q=${encodeURIComponent(prompt)}`);
     }
     if (!response.ok) throw new Error(`HTTP ${response.status}`);
