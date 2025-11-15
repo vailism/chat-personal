@@ -1,6 +1,4 @@
 const GEMINI_MODEL = 'gemini-2.0-flash';
-const SPOTIFY_CLIENT_ID = 'b809f7a9e4044913b29d773204b0dd18';
-const SPOTIFY_REDIRECT_URI = 'http://127.0.0.1:3000/callback.html';
 const SPOTIFY_SCOPES = ['user-read-playback-state','user-modify-playback-state','user-read-currently-playing'];
 let spotifyAccessToken = null;
 let spotifyRefreshToken = null;
@@ -14,16 +12,7 @@ window.addEventListener('load', () => {
   handleSpotifyRedirect();
 });
 
-function buildSpotifyAuthUrl(){
-  const params = new URLSearchParams({
-    client_id: SPOTIFY_CLIENT_ID,
-    response_type: 'code',
-    redirect_uri: SPOTIFY_REDIRECT_URI,
-    scope: SPOTIFY_SCOPES.join(' '),
-    show_dialog: 'true'
-  });
-  return 'https://accounts.spotify.com/authorize?' + params.toString();
-}
+// Removed buildSpotifyAuthUrl: server builds secure URL at /spotify-login
 
 function handleSpotifyRedirect(){
   const code = new URLSearchParams(window.location.search).get('code');
@@ -37,7 +26,7 @@ async function exchangeSpotifyCode(code){
     const response = await fetch('/spotify-auth', {
       method:'POST',
       headers:{'Content-Type':'application/json'},
-      body:JSON.stringify({ code, redirect_uri: SPOTIFY_REDIRECT_URI })
+      body:JSON.stringify({ code }) // server derives redirect_uri
     });
     if(!response.ok) throw new Error('Auth failed');
     const data = await response.json();
@@ -153,7 +142,7 @@ input.addEventListener('keydown', (e) => {
 const spotifyLoginBtn = document.getElementById('spotify-login-btn');
 if(spotifyLoginBtn){
   spotifyLoginBtn.addEventListener('click', () => {
-    window.location.href = buildSpotifyAuthUrl();
+    window.location.href = '/spotify-login';
   });
 }
 
