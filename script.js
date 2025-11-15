@@ -1,7 +1,4 @@
-const PROXY_URL = '';
-const GEMINI_API_KEY = 'AIzaSyCKpXpXBq6W9qxCpL2k5eXbyZUI_WHUCek';
 const GEMINI_MODEL = 'gemini-2.0-flash';
-const GEMINI_API_ENDPOINT = `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent`;
 const SPOTIFY_CLIENT_ID = 'b809f7a9e4044913b29d773204b0dd18';
 const SPOTIFY_REDIRECT_URI = 'http://127.0.0.1:3000/callback.html';
 const SPOTIFY_SCOPES = ['user-read-playback-state','user-modify-playback-state','user-read-currently-playing'];
@@ -208,16 +205,12 @@ async function callAPI(prompt) {
   const sendBtn = document.getElementById('send-btn');
   sendBtn.classList.add('sending');
 
-  const useProxy = !!PROXY_URL;
-  const url = useProxy ? PROXY_URL + '/chat' : GEMINI_API_ENDPOINT;
-  const payload = useProxy 
-    ? { prompt }
-    : { contents: [{ parts: [{ text: prompt }] }] };
+  // Always use backend proxy to protect API key
+  const url = '/chat';
+  const payload = { prompt };
 
   try {
     const headers = { 'Content-Type': 'application/json' };
-    if (!useProxy) headers['X-goog-api-key'] = GEMINI_API_KEY; // use header per curl spec
-
     const response = await fetch(url, {
       method: 'POST',
       headers,
@@ -227,7 +220,7 @@ async function callAPI(prompt) {
     if (!response.ok) throw new Error(`HTTP ${response.status}`);
 
     const data = await response.json();
-    const text = data.candidates?.[0]?.content?.parts?.[0]?.text || 'No response available.';
+    const text = data.text || data.candidates?.[0]?.content?.parts?.[0]?.text || 'No response available.';
     return text;
   } finally {
     sendBtn.classList.remove('sending');
