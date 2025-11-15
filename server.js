@@ -110,7 +110,7 @@ app.post('/spotify-refresh', async (req,res) => {
 
 // Chat proxy (Gemini) - keep API key on server only
 const GEMINI_API_KEY = process.env.GEMINI_API_KEY;
-const GEMINI_MODEL = process.env.GEMINI_MODEL || 'gemini-2.0-flash';
+const GEMINI_MODEL = process.env.GEMINI_MODEL || 'gemini-1.5-flash';
 
 app.post('/chat', async (req, res) => {
   try {
@@ -118,18 +118,19 @@ app.post('/chat', async (req, res) => {
     if (!prompt) return res.status(400).json({ error: 'Missing prompt' });
     if (!GEMINI_API_KEY) return res.status(500).json({ error: 'Server missing GEMINI_API_KEY' });
 
-    const endpoint = `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent`;
+    const endpoint = `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent?key=${encodeURIComponent(GEMINI_API_KEY)}`;
     const resp = await fetch(endpoint, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        'x-goog-api-key': GEMINI_API_KEY
+        'Accept': 'application/json'
       },
-      body: JSON.stringify({ contents: [{ parts: [{ text: prompt }] }] })
+      body: JSON.stringify({ contents: [{ role: 'user', parts: [{ text: prompt }] }] })
     });
 
     if (!resp.ok) {
       const t = await resp.text();
+      console.error('Gemini upstream error', resp.status, t);
       return res.status(resp.status).json({ error: 'Upstream error', detail: t });
     }
 
