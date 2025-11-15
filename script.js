@@ -82,12 +82,12 @@ function updateSpotifyUI(data){
   const artist = document.getElementById('spotify-artist');
   const albumImg = document.getElementById('spotify-album');
   const playBtn = document.getElementById('sp-play');
+  if(!title || !artist || !albumImg || !playBtn) return; // guard if UI not rendered
   const isPlaying = data.is_playing;
+  title.textContent = data.item?.name || '';
+  artist.textContent = (data.item?.artists||[]).map(a=>a.name).join(', ');
 
-  title.textContent = data.item.name;
-  artist.textContent = data.item.artists.map(a=>a.name).join(', ');
-
-  const img = data.item.album.images[1] || data.item.album.images[0];
+  const img = data.item?.album?.images?.[1] || data.item?.album?.images?.[0];
   if(img) albumImg.src = img.url;
 
   playBtn.textContent = isPlaying ? '⏸' : '▶';
@@ -194,20 +194,17 @@ async function callAPI(prompt) {
   const sendBtn = document.getElementById('send-btn');
   sendBtn.classList.add('sending');
 
-  // Always use backend proxy to protect API key
   const url = '/chat';
   const payload = { prompt };
 
   try {
     const headers = { 'Content-Type': 'application/json' };
-    const response = await fetch(url, {
-      method: 'POST',
-      headers,
-      body: JSON.stringify(payload)
-    });
-
+    let response = await fetch(url, { method: 'POST', headers, body: JSON.stringify(payload) });
+    if (response.status === 405) {
+      // Fallback to GET for hosts that block POST on static backends
+      response = await fetch(`${url}?q=${encodeURIComponent(prompt)}`);
+    }
     if (!response.ok) throw new Error(`HTTP ${response.status}`);
-
     const data = await response.json();
     const text = data.text || data.candidates?.[0]?.content?.parts?.[0]?.text || 'No response available.';
     return text;

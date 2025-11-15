@@ -11,7 +11,20 @@ const __dirname = path.dirname(__filename);
 
 const app = express();
 app.set('trust proxy', true);
-app.use(cors());
+
+// Configure CORS for prod (allow specific origins via env), include preflight
+const corsOrigins = process.env.CORS_ORIGIN
+  ? process.env.CORS_ORIGIN.split(',').map(s => s.trim()).filter(Boolean)
+  : true; // reflect request origin
+const corsOptions = {
+  origin: corsOrigins,
+  methods: ['GET','POST','PUT','PATCH','DELETE','OPTIONS'],
+  allowedHeaders: ['Content-Type','Authorization','Accept','X-Requested-With'],
+  maxAge: 86400
+};
+app.use(cors(corsOptions));
+app.options('*', cors(corsOptions));
+
 app.use(express.json());
 
 // Serve static files (index.html, callback.html, assets)
@@ -116,34 +129,46 @@ app.post('/spotify-refresh', async (req,res) => {
 const GEMINI_API_KEY = process.env.GEMINI_API_KEY;
 const GEMINI_MODEL = process.env.GEMINI_MODEL || 'gemini-1.5-flash';
 
+async function generateWithGemini(prompt){
+  const endpoint = `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent?key=${encodeURIComponent(GEMINI_API_KEY)}`;
+  const resp = await fetch(endpoint, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
+    body: JSON.stringify({ contents: [{ role: 'user', parts: [{ text: prompt }] }] })
+  });
+  if (!resp.ok) {
+    const t = await resp.text();
+    throw Object.assign(new Error('Upstream error'), { status: resp.status, detail: t });
+  }
+  const data = await resp.json();
+  const text = data?.candidates?.[0]?.content?.parts?.[0]?.text || '';
+  return { text, raw: data };
+}
+
 app.post('/chat', async (req, res) => {
   try {
     const { prompt } = req.body || {};
     if (!prompt) return res.status(400).json({ error: 'Missing prompt' });
     if (!GEMINI_API_KEY) return res.status(500).json({ error: 'Server missing GEMINI_API_KEY' });
-
-    const endpoint = `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent?key=${encodeURIComponent(GEMINI_API_KEY)}`;
-    const resp = await fetch(endpoint, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Accept': 'application/json'
-      },
-      body: JSON.stringify({ contents: [{ role: 'user', parts: [{ text: prompt }] }] })
-    });
-
-    if (!resp.ok) {
-      const t = await resp.text();
-      console.error('Gemini upstream error', resp.status, t);
-      return res.status(resp.status).json({ error: 'Upstream error', detail: t });
-    }
-
-    const data = await resp.json();
-    const text = data?.candidates?.[0]?.content?.parts?.[0]?.text || '';
-    return res.json({ text });
+    const out = await generateWithGemini(prompt);
+    return res.json({ text: out.text });
   } catch (e) {
-    console.error('Gemini chat error', e);
-    return res.status(500).json({ error: 'Server error' });
+    console.error('Gemini chat error (POST)', e.status || '', e.detail || e);
+    return res.status(e.status || 500).json({ error: 'Server error', detail: e.detail });
+  }
+});
+
+// Optional GET support for environments that block POST or for quick testing
+app.get('/chat', async (req, res) => {
+  try {
+    const prompt = req.query.q || req.query.prompt;
+    if (!prompt) return res.status(400).json({ error: 'Missing prompt (q)' });
+    if (!GEMINI_API_KEY) return res.status(500).json({ error: 'Server missing GEMINI_API_KEY' });
+    const out = await generateWithGemini(String(prompt));
+    return res.json({ text: out.text });
+  } catch (e) {
+    console.error('Gemini chat error (GET)', e.status || '', e.detail || e);
+    return res.status(e.status || 500).json({ error: 'Server error', detail: e.detail });
   }
 });
 
