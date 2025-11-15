@@ -1,0 +1,132 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<link rel="icon" href="favicon_io/favicon.ico">
+<link rel="apple-touch-icon" sizes="180x180" href="favicon_io/apple-touch-icon.png">
+<link rel="icon" type="image/png" sizes="32x32" href="favicon_io/favicon-32x32.png">
+<link rel="icon" type="image/png" sizes="16x16" href="favicon_io/favicon-16x16.png">
+<link rel="manifest" href="favicon_io/site.webmanifest">
+<title>Anand</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<div id="loading-screen" aria-label="Loading application">
+  <div class="loading-logo" aria-hidden="true">GOAT</div>
+  <div class="loading-bar-container" aria-hidden="true">
+    <div class="loading-progress"></div>
+  </div>
+  <div class="loading-text" role="status">Loading...</div>
+</div>
+
+<div id="main-app">
+  <div class="bg-orb orb-1" aria-hidden="true"></div>
+  <div class="bg-orb orb-2" aria-hidden="true"></div>
+  <div class="bg-orb orb-3" aria-hidden="true"></div>
+
+  <div class="chat-container">
+    <div id="toast-container" aria-live="assertive" aria-atomic="true"></div>
+    <div class="chat-header">
+      <div class="header-left">
+        <div class="header-icon"><img src="c.jpg" alt="Anand AI bot avatar" style="width:100%;height:100%;object-fit:cover;border-radius:inherit;"></div>
+        <div class="header-content">
+          <h1>Anand</h1>
+          <div class="header-subtitle">Chatbot</div>
+        </div>
+      </div>
+      <div class="header-right" style="display:flex;align-items:center;gap:16px;">
+        <div class="status-indicator" role="status" aria-label="System online">
+          <div class="status-dot" aria-hidden="true"></div>
+          <span>ONLINE</span>
+        </div>
+        <div id="spotify-player" class="spotify-player" aria-live="polite">
+          <div class="spotify-logo" aria-hidden="true">
+            <svg viewBox="0 0 168 168" width="28" height="28" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+              <circle cx="84" cy="84" r="84" fill="#1DB954"/>
+              <path fill="#000" d="M121.5 113.4c-1.6 2.6-5 3.4-7.6 1.8-20.9-12.8-47.2-15.7-78.3-8.5-3 .7-6-1.2-6.7-4.2-.7-3 1.2-6 4.2-6.7 34.2-7.8 63.1-4.5 86.3 10 2.6 1.6 3.4 5 2.1 7.6zm9.7-21.5c-2 3.2-6.3 4.2-9.5 2.2-24-14.8-60.6-19.1-89-10.3-3.5 1.1-7.2-.9-8.3-4.4-1.1-3.5.9-7.2 4.4-8.3 32.1-9.8 72.2-5 99.6 12.3 3.2 2 4.2 6.3 2.8 8.5zm.8-23.2c-28.7-17-76.1-18.6-103.4-10.1-4.1 1.3-8.5-1-9.8-5.1-1.3-4.1 1-8.5 5.1-9.8 31.5-9.6 83.6-7.7 116.2 12 3.6 2.1 4.8 6.7 2.7 10.3-2 3.3-6.5 4.4-10.8 2.7z"/>
+            </svg>
+          </div>
+          <button id="spotify-login-btn" type="button" aria-label="Connect Spotify">Connect Spotify</button>
+          <div class="spotify-track" hidden>
+            <img id="spotify-album" alt="Album art" />
+            <div class="spotify-meta">
+              <div class="spotify-title" id="spotify-title"></div>
+              <div class="spotify-artist" id="spotify-artist"></div>
+            </div>
+            <div class="spotify-controls" aria-label="Playback controls">
+              <button class="sp-btn" id="sp-prev" aria-label="Previous track">⏮</button>
+              <button class="sp-btn" id="sp-play" aria-label="Play/Pause">▶</button>
+              <button class="sp-btn" id="sp-next" aria-label="Next track">⏭</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="messages" id="messages" role="log" aria-live="polite" aria-atomic="false">
+      <div class="welcome-message" aria-label="Welcome message">
+        <div class="welcome-icon" aria-hidden="true">✨</div>
+        <h2>Welcome to Anand AI</h2>
+        <p>Your intelligent assistant. Ask me anything!</p>
+      </div>
+    </div>
+
+    <div class="input-area">
+      <div class="input-wrapper">
+        <textarea 
+          id="message-input" 
+          placeholder="Ask me anything..." 
+          rows="1"
+          aria-label="Type your message"
+        ></textarea>
+        <button id="send-btn" aria-label="Send message" type="button">
+          <span class="send-icon" aria-hidden="true">↑</span>
+          <span class="spinner" aria-hidden="true"></span>
+        </button>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<script src="script.js"></script>
+<script>
+(function(){
+  const observer = new MutationObserver(mutations => {
+    mutations.forEach(m => {
+      m.addedNodes.forEach(node => {
+        if(node.classList && node.classList.contains('message')){
+          const avatar = node.querySelector('.message-avatar');
+          if(avatar){
+            if(node.classList.contains('bot')){
+              if(!avatar.querySelector('img')){
+                avatar.textContent='';
+                const img=document.createElement('img');
+                img.src='c.jpg';
+                img.alt='Bot avatar';
+                img.className='bot-avatar-img';
+                avatar.appendChild(img);
+              }
+            } else if(node.classList.contains('user')) {
+              if(!avatar.querySelector('img')){
+                avatar.textContent='';
+                const img=document.createElement('img');
+                img.src='screenshot.png';
+                img.alt='User avatar';
+                img.style='width:100%;height:100%;object-fit:cover;border-radius:inherit;';
+                avatar.appendChild(img);
+              }
+            }
+          }
+        }
+      });
+    });
+  });
+  observer.observe(document.getElementById('messages'),{childList:true});
+})();
+</script>
+
+</body>
+</html>
