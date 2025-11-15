@@ -10,11 +10,15 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 const app = express();
+app.set('trust proxy', true);
 app.use(cors());
 app.use(express.json());
 
 // Serve static files (index.html, callback.html, assets)
-app.use(express.static(__dirname));
+app.use(express.static(__dirname, { extensions: ['html'] }));
+
+// Healthcheck
+app.get('/healthz', (req, res) => res.json({ ok: true }));
 
 // Root and callback routes
 app.get('/', (req,res)=>res.sendFile(path.join(__dirname,'index.html')));
