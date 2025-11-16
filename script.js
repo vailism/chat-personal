@@ -37,6 +37,8 @@ async function exchangeSpotifyCode(code){
     spotifyExpiresAt = Date.now() + (data.expires_in*1000);
     document.getElementById('spotify-login-btn').hidden = true;
     document.querySelector('.spotify-track').hidden = false;
+    // Immediately probe devices and current track
+    await checkDevices();
     fetchCurrentTrack();
     setInterval(fetchCurrentTrack, 15000);
   }catch(e){
@@ -62,15 +64,37 @@ async function refreshSpotifyToken(){
   }
 }
 
+// Helper that auto-refreshes tokens on 401 and retries once
+async function spotifyFetch(endpoint, opts={}){
+  if(!spotifyAccessToken) throw new Error('No Spotify token');
+  if(Date.now() > spotifyExpiresAt - 60000) await refreshSpotifyToken();
+  let res = await fetch(endpoint, { ...opts, headers: { ...(opts.headers||{}), Authorization: 'Bearer '+spotifyAccessToken } });
+  if(res.status === 401){
+    await refreshSpotifyToken();
+    res = await fetch(endpoint, { ...opts, headers: { ...(opts.headers||{}), Authorization: 'Bearer '+spotifyAccessToken } });
+  }
+  return res;
+}
+
+let notifiedNoPlayback = false;
+let notifiedPremium = false;
+
 async function fetchCurrentTrack(){
   if(!spotifyAccessToken) return;
-  if(Date.now() > spotifyExpiresAt - 60000) await refreshSpotifyToken();
   try{
-    const res = await fetch('https://api.spotify.com/v1/me/player/currently-playing',{
-      headers:{ Authorization:'Bearer '+spotifyAccessToken }
-    });
-    if(res.status === 204) return;
-    if(!res.ok) throw new Error('Playback fetch failed');
+    const res = await spotifyFetch('https://api.spotify.com/v1/me/player/currently-playing');
+    if(res.status === 204){
+      if(!notifiedNoPlayback){
+        toast('No active playback. Open Spotify and start a song on any device.', 'error');
+        notifiedNoPlayback = true;
+      }
+      return;
+    }
+    if(res.status === 403){
+      if(!notifiedPremium){ toast('Playback controls require Spotify Premium.', 'error'); notifiedPremium=true; }
+      return;
+    }
+    if(!res.ok) throw new Error('Playback fetch failed: '+res.status);
     const data = await res.json();
     if(!data || !data.item) return;
     updateSpotifyUI(data);
@@ -99,32 +123,38 @@ async function spotifyTogglePlay(){
   if(!spotifyAccessToken) return;
   try{
     const endpoint = 'https://api.spotify.com/v1/me/player/' + (document.getElementById('sp-play').textContent === '▶' ? 'play':'pause');
-    const res = await fetch(endpoint,{
-      method:'PUT',
-      headers:{ Authorization:'Bearer '+spotifyAccessToken }
-    });
-    if(res.status === 204 || res.ok){
-      fetchCurrentTrack();
-    }
-  }catch(e){
-    console.error(e);
-  }
+    const res = await spotifyFetch(endpoint,{ method:'PUT' });
+    if(res.status === 403){ if(!notifiedPremium){ toast('Playback controls require Spotify Premium.','error'); notifiedPremium=true; } return; }
+    if(res.status === 204 || res.ok){ fetchCurrentTrack(); }
+  }catch(e){ console.error(e); }
 }
 
 async function spotifyNext(){
   if(!spotifyAccessToken) return;
-  fetch('https://api.spotify.com/v1/me/player/next',{
-    method:'POST',
-    headers:{ Authorization:'Bearer '+spotifyAccessToken }
-  }).then(()=>setTimeout(fetchCurrentTrack,1000));
+  try{
+    const res = await spotifyFetch('https://api.spotify.com/v1/me/player/next',{ method:'POST' });
+    if(res.status === 403){ if(!notifiedPremium){ toast('Next/Previous require Spotify Premium.','error'); notifiedPremium=true; } return; }
+    setTimeout(fetchCurrentTrack,1000);
+  }catch(e){ console.error(e); }
 }
 
 async function spotifyPrev(){
   if(!spotifyAccessToken) return;
-  fetch('https://api.spotify.com/v1/me/player/previous',{
-    method:'POST',
-    headers:{ Authorization:'Bearer '+spotifyAccessToken }
-  }).then(()=>setTimeout(fetchCurrentTrack,1000));
+  try{
+    const res = await spotifyFetch('https://api.spotify.com/v1/me/player/previous',{ method:'POST' });
+    if(res.status === 403){ if(!notifiedPremium){ toast('Next/Previous require Spotify Premium.','error'); notifiedPremium=true; } return; }
+    setTimeout(fetchCurrentTrack,1000);
+  }catch(e){ console.error(e); }
+}
+
+async function checkDevices(){
+  try{
+    const res = await spotifyFetch('https://api.spotify.com/v1/me/player/devices');
+    if(!res.ok) return;
+    const data = await res.json();
+    const hasActive = (data.devices||[]).some(d=>d.is_active);
+    if(!hasActive){ toast('Open Spotify and play a song on any device, then return here.', 'error'); }
+  }catch(e){ console.error(e); }
 }
 
 const input = document.getElementById('message-input');
