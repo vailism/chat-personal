@@ -460,85 +460,132 @@ document.addEventListener('DOMContentLoaded', () => {
 });
 
 // ========================================
-// Chat History Persistence
+// Chat History Persistence (Enhanced)
 // ========================================
+
+const CHAT_STORAGE_KEY = 'chatHistory';
+let chatStorageMode = 'local'; // fallback to session if local blocked
+
+function getChatHistory(){
+  try {
+    const raw = (chatStorageMode==='local'? localStorage.getItem(CHAT_STORAGE_KEY): sessionStorage.getItem(CHAT_STORAGE_KEY)) || '[]';
+    return JSON.parse(raw);
+  } catch(e){
+    console.error('History parse error, resetting', e);
+    clearCorruptHistory();
+    return [];
+  }
+}
+function setChatHistory(arr){
+  try {
+    const raw = JSON.stringify(arr);
+    if(chatStorageMode==='local') localStorage.setItem(CHAT_STORAGE_KEY, raw);
+    else sessionStorage.setItem(CHAT_STORAGE_KEY, raw);
+  } catch(e){
+    console.warn('Primary storage failed, switching to sessionStorage', e);
+    chatStorageMode='session';
+    try { sessionStorage.setItem(CHAT_STORAGE_KEY, JSON.stringify(arr)); } catch(e2){ console.error('Session storage also failed', e2); }
+  }
+}
+function clearCorruptHistory(){
+  try { localStorage.removeItem(CHAT_STORAGE_KEY); } catch(_){ }
+  try { sessionStorage.removeItem(CHAT_STORAGE_KEY); } catch(_){ }
+}
 
 function saveChatMessage(text, role) {
   try {
-    const history = JSON.parse(localStorage.getItem('chatHistory') || '[]');
+    const history = getChatHistory();
     history.push({ text, role, timestamp: Date.now() });
-    // Keep last 100 messages
-    if(history.length > 100) history.shift();
-    localStorage.setItem('chatHistory', JSON.stringify(history));
+    if(history.length > 200) history.splice(0, history.length - 200); // keep last 200
+    setChatHistory(history);
   } catch(e) { console.error('Save message error', e); }
 }
 
 function restoreChatHistory() {
   try {
-    const history = JSON.parse(localStorage.getItem('chatHistory') || '[]');
+    const history = getChatHistory();
     if(history.length > 0) {
       const welcome = document.querySelector('.welcome-card');
       if(welcome) welcome.remove();
       history.forEach(msg => addMessage(msg.text, msg.role, false));
+      // Provide quick toast feedback
+      toast(`🔄 Restored ${history.length} messages`, 'success');
     }
   } catch(e) { console.error('Restore history error', e); }
 }
 
 function viewChatHistory() {
   try {
-    const history = JSON.parse(localStorage.getItem('chatHistory') || '[]');
-    if(history.length === 0) {
-      toast('No chat history available', 'warning');
-      return;
-    }
-    
-    const historyInfo = `📜 Chat History\n\n` +
-      `Total messages: ${history.length}\n` +
-      `First message: ${new Date(history[0].timestamp).toLocaleString()}\n` +
-      `Last message: ${new Date(history[history.length - 1].timestamp).toLocaleString()}\n\n` +
-      `Recent messages:\n` +
-      history.slice(-5).map((msg, i) => 
-        `${i + 1}. [${msg.role.toUpperCase()}] ${msg.text.substring(0, 50)}${msg.text.length > 50 ? '...' : ''}`
-      ).join('\n');
-    
-    alert(historyInfo);
-    toast('📜 Viewing history', 'success');
-  } catch(e) { 
-    console.error('View history error', e);
-    toast('Failed to load history', 'error');
-  }
+    const history = getChatHistory();
+    if(history.length === 0){ toast('No chat history', 'warning'); return; }
+    showHistoryPanel(history);
+  } catch(e){ console.error('View history error', e); toast('Failed to load history', 'error'); }
 }
 
 function clearChatHistory() {
   if(confirm('Clear all chat messages? This cannot be undone.')) {
-    localStorage.removeItem('chatHistory');
+    clearCorruptHistory();
+    setChatHistory([]);
     const messagesDiv = document.getElementById('messages');
-    messagesDiv.innerHTML = '';
+    if(messagesDiv){ messagesDiv.innerHTML=''; }
     // Re-add welcome card
-    messagesDiv.innerHTML = `
-      <div class="welcome-card" aria-label="Welcome message">
-        <div class="welcome-icon-modern">
-          <svg width="48" height="48" viewBox="0 0 24 24" fill="none">
-            <path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5" stroke="url(#welcomeGradient)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-            <defs>
-              <linearGradient id="welcomeGradient" x1="0" y1="0" x2="24" y2="24">
-                <stop stop-color="#667eea"/>
-                <stop offset="1" stop-color="#764ba2"/>
-              </linearGradient>
-            </defs>
-          </svg>
-        </div>
-        <h2 class="welcome-title">Welcome to Anand AI</h2>
-        <p class="welcome-desc">Your intelligent assistant powered by advanced AI. Ask me anything, and I'll do my best to help!</p>
-        <div class="quick-actions">
-          <div class="quick-action-chip" data-prompt="Give me 5 creative project ideas for a web developer">💡 Get Ideas</div>
-          <div class="quick-action-chip" data-prompt="Explain how to analyze user data effectively with privacy in mind">📊 Analyze Data</div>
-          <div class="quick-action-chip" data-prompt="Help me write engaging content for a tech blog">✍️ Write Content</div>
-        </div>
-      </div>`;
+    if(messagesDiv){ messagesDiv.innerHTML = `\n      <div class="welcome-card" aria-label="Welcome message">\n        <div class="welcome-icon-modern">\n          <svg width="48" height="48" viewBox="0 0 24 24" fill="none">\n            <path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5" stroke="url(#welcomeGradient)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>\n            <defs>\n              <linearGradient id="welcomeGradient" x1="0" y1="0" x2="24" y2="24">\n                <stop stop-color="#667eea"/>\n                <stop offset="1" stop-color="#764ba2"/>\n              </linearGradient>\n            </defs>\n          </svg>\n        </div>\n        <h2 class="welcome-title">Welcome to Anand AI</h2>\n        <p class="welcome-desc">Your intelligent assistant powered by advanced AI. Ask me anything, and I'll do my best to help!</p>\n        <div class="quick-actions">\n          <div class="quick-action-chip" data-prompt="Give me 5 creative project ideas for a web developer">💡 Get Ideas</div>\n          <div class="quick-action-chip" data-prompt="Explain how to analyze user data effectively with privacy in mind">📊 Analyze Data</div>\n          <div class="quick-action-chip" data-prompt="Help me write engaging content for a tech blog">✍️ Write Content</div>\n        </div>\n      </div>`; }
     attachQuickActionListeners();
     toast('Chat cleared', 'success');
+    hideHistoryPanel();
   }
+}
+
+// History panel (inline overlay)
+function ensureHistoryPanel(){
+  let panel = document.getElementById('history-panel');
+  if(!panel){
+    panel = document.createElement('div');
+    panel.id='history-panel';
+    panel.setAttribute('role','dialog');
+    panel.setAttribute('aria-label','Chat History');
+    panel.style.position='fixed';
+    panel.style.top='90px';
+    panel.style.right='24px';
+    panel.style.width='360px';
+    panel.style.maxHeight='60vh';
+    panel.style.overflow='auto';
+    panel.style.padding='16px';
+    panel.style.background='var(--glass)';
+    panel.style.backdropFilter='blur(20px)';
+    panel.style.WebkitBackdropFilter='blur(20px)';
+    panel.style.border='1px solid var(--glass-border)';
+    panel.style.borderRadius='var(--radius-lg)';
+    panel.style.boxShadow='var(--shadow-lg)';
+    panel.style.zIndex='500';
+    panel.style.display='none';
+    panel.innerHTML = '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;"><strong>📜 History</strong><button id="history-close" style="background:var(--surface);border:1px solid var(--glass-border);border-radius:8px;padding:4px 8px;color:var(--text-secondary);cursor:pointer;font-size:12px;">Close</button></div><div id="history-content" style="font-size:13px;line-height:1.4;color:var(--text-secondary);"></div>';
+    document.body.appendChild(panel);
+    const close = panel.querySelector('#history-close');
+    close.addEventListener('click', hideHistoryPanel);
+  }
+  return panel;
+}
+function showHistoryPanel(history){
+  const panel = ensureHistoryPanel();
+  const content = panel.querySelector('#history-content');
+  content.innerHTML = '';
+  const meta = document.createElement('div');
+  meta.style.marginBottom='8px';
+  meta.textContent = `Messages: ${history.length} | First: ${new Date(history[0].timestamp).toLocaleString()} | Last: ${new Date(history[history.length-1].timestamp).toLocaleString()}`;
+  content.appendChild(meta);
+  history.slice().reverse().slice(0,100).forEach(item => {
+    const row = document.createElement('div');
+    row.style.marginBottom='6px';
+    row.textContent = `[${item.role}] ${new Date(item.timestamp).toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'})} - ${item.text.slice(0,120)}${item.text.length>120?'…':''}`;
+    content.appendChild(row);
+  });
+  panel.style.display='block';
+  toast('📜 History opened','success');
+}
+function hideHistoryPanel(){
+  const panel=document.getElementById('history-panel');
+  if(panel) panel.style.display='none';
 }
 
 // ========================================
