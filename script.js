@@ -480,6 +480,31 @@ function restoreChatHistory() {
   } catch(e) { console.error('Restore history error', e); }
 }
 
+function viewChatHistory() {
+  try {
+    const history = JSON.parse(localStorage.getItem('chatHistory') || '[]');
+    if(history.length === 0) {
+      toast('No chat history available', 'warning');
+      return;
+    }
+    
+    const historyInfo = `📜 Chat History\n\n` +
+      `Total messages: ${history.length}\n` +
+      `First message: ${new Date(history[0].timestamp).toLocaleString()}\n` +
+      `Last message: ${new Date(history[history.length - 1].timestamp).toLocaleString()}\n\n` +
+      `Recent messages:\n` +
+      history.slice(-5).map((msg, i) => 
+        `${i + 1}. [${msg.role.toUpperCase()}] ${msg.text.substring(0, 50)}${msg.text.length > 50 ? '...' : ''}`
+      ).join('\n');
+    
+    alert(historyInfo);
+    toast('📜 Viewing history', 'success');
+  } catch(e) { 
+    console.error('View history error', e);
+    toast('Failed to load history', 'error');
+  }
+}
+
 function clearChatHistory() {
   if(confirm('Clear all chat messages? This cannot be undone.')) {
     localStorage.removeItem('chatHistory');
@@ -517,11 +542,11 @@ function clearChatHistory() {
 // ========================================
 
 function toggleTheme() {
-  const currentTheme = document.documentElement.getAttribute('data-theme');
+  const currentTheme = document.documentElement.getAttribute('data-theme') || 'dark';
   const newTheme = currentTheme === 'light' ? 'dark' : 'light';
   document.documentElement.setAttribute('data-theme', newTheme);
   localStorage.setItem('theme', newTheme);
-  toast(`${newTheme === 'light' ? '☀️' : '🌙'} ${newTheme.charAt(0).toUpperCase() + newTheme.slice(1)} mode`, 'success');
+  toast(`${newTheme === 'light' ? '☀️' : '🌙'} ${newTheme.charAt(0).toUpperCase() + newTheme.slice(1)} mode activated`, 'success');
 }
 
 function restoreTheme() {
@@ -529,9 +554,10 @@ function restoreTheme() {
   if(savedTheme) {
     document.documentElement.setAttribute('data-theme', savedTheme);
   } else {
-    // Auto-detect system preference
+    // Default to dark theme
     const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
-    document.documentElement.setAttribute('data-theme', prefersDark ? 'dark' : 'light');
+    const defaultTheme = prefersDark ? 'dark' : 'dark'; // Force dark as default
+    document.documentElement.setAttribute('data-theme', defaultTheme);
   }
 }
 
@@ -668,6 +694,10 @@ function initializeFeatures() {
   // Theme toggle button
   const themeBtn = document.getElementById('theme-toggle-btn');
   if(themeBtn) themeBtn.addEventListener('click', toggleTheme);
+
+  // History button
+  const historyBtn = document.getElementById('history-btn');
+  if(historyBtn) historyBtn.addEventListener('click', viewChatHistory);
 
   // Spotify logout button
   const spotifyLogoutBtn = document.getElementById('spotify-logout-btn');
