@@ -28,7 +28,7 @@ async function exchangeSpotifyCode(code){
     const response = await fetch((API_BASE||'') + '/spotify-auth', {
       method:'POST',
       headers:{'Content-Type':'application/json'},
-      body:JSON.stringify({ code }) // server derives redirect_uri
+      body:JSON.stringify({ code })
     });
     if(!response.ok) throw new Error('Auth failed');
     const data = await response.json();
@@ -36,8 +36,7 @@ async function exchangeSpotifyCode(code){
     spotifyRefreshToken = data.refresh_token;
     spotifyExpiresAt = Date.now() + (data.expires_in*1000);
     document.getElementById('spotify-login-btn').hidden = true;
-    document.querySelector('.spotify-track').hidden = false;
-    // Immediately probe devices and current track
+    document.querySelector('.spotify-player-active').hidden = false;
     await checkDevices();
     fetchCurrentTrack();
     setInterval(fetchCurrentTrack, 15000);
@@ -178,6 +177,26 @@ if(spotifyLoginBtn){
   });
 }
 
+// Paste button functionality
+document.addEventListener('DOMContentLoaded', () => {
+  const pasteBtn = document.querySelector('.input-action-btn');
+  if(pasteBtn) {
+    pasteBtn.addEventListener('click', async () => {
+      try {
+        const text = await navigator.clipboard.readText();
+        const input = document.getElementById('message-input');
+        if(input) {
+          input.value += text;
+          input.dispatchEvent(new Event('input'));
+          toast('Pasted from clipboard', 'success');
+        }
+      } catch(e) {
+        toast('Paste failed', 'error');
+      }
+    });
+  }
+});
+
 const spPlay = document.getElementById('sp-play');
 const spNext = document.getElementById('sp-next');
 const spPrev = document.getElementById('sp-prev');
@@ -201,7 +220,7 @@ async function sendMessage() {
   const text = input.value.trim();
   if (!text) return;
 
-  const welcome = document.querySelector('.welcome-message');
+  const welcome = document.querySelector('.welcome-card');
   if (welcome) welcome.remove();
 
   input.value = '';
@@ -300,29 +319,22 @@ function hideTyping() {
   if (typing) typing.remove();
 }
 
-// Add cut/copy/paste buttons to input area
-const inputWrapper = document.querySelector('.input-wrapper');
-if(inputWrapper){
-  const btnGroup = document.createElement('div');
-  btnGroup.className = 'ccp-btn-group';
-  btnGroup.style = 'display:flex;gap:8px;align-items:center;margin-right:8px;';
-
-  const pasteBtn = document.createElement('button');
-  pasteBtn.type = 'button';
-  pasteBtn.className = 'ccp-btn';
-  pasteBtn.setAttribute('aria-label','Paste');
-  pasteBtn.innerHTML = `<svg width="20" height="20" viewBox="0 0 512 512" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true"><path d="M320 264c0-13.255-10.745-24-24-24h-80c-13.255 0-24 10.745-24 24v24c0 13.255 10.745 24 24 24h80c13.255 0 24-10.745 24-24v-24z" fill="#000"/><path d="M432 320v112c0 17.673-14.327 32-32 32H112c-17.673 0-32-14.327-32-32V320" stroke="#000" stroke-width="32" stroke-linecap="round" stroke-linejoin="round"/><path d="M320 264c0-13.255-10.745-24-24-24h-80c-13.255 0-24 10.745-24 24v24c0 13.255 10.745 24 24 24h80c13.255 0 24-10.745 24-24v-24z" stroke="#000" stroke-width="32" stroke-linecap="round" stroke-linejoin="round"/><path d="M432 320v112c0 17.673-14.327 32-32 32H112c-17.673 0-32-14.327-32-32V320" fill="none" stroke="#000" stroke-width="32" stroke-linecap="round" stroke-linejoin="round"/><path d="M256 176v160" stroke="#000" stroke-width="32" stroke-linecap="round" stroke-linejoin="round"/><path d="M176 176h160" stroke="#000" stroke-width="32" stroke-linecap="round" stroke-linejoin="round"/></svg>`;
-  pasteBtn.onclick = async () => {
-    try {
-      const text = await navigator.clipboard.readText();
-      input.value += text;
-      input.dispatchEvent(new Event('input'));
-      toast('Pasted from clipboard','success');
-    } catch(e){
-      toast('Paste failed','error');
-    }
-  };
-
-  btnGroup.appendChild(pasteBtn);
-  inputWrapper.insertBefore(btnGroup, inputWrapper.firstChild);
-}
+// Paste button functionality (already in HTML, just wire it up)
+document.addEventListener('DOMContentLoaded', () => {
+  const pasteBtn = document.querySelector('.input-action-btn');
+  if(pasteBtn) {
+    pasteBtn.addEventListener('click', async () => {
+      try {
+        const text = await navigator.clipboard.readText();
+        const input = document.getElementById('message-input');
+        if(input) {
+          input.value += text;
+          input.dispatchEvent(new Event('input'));
+          toast('Pasted from clipboard', 'success');
+        }
+      } catch(e) {
+        toast('Paste failed', 'error');
+      }
+    });
+  }
+});
