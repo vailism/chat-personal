@@ -4,6 +4,42 @@ let spotifyAccessToken = null;
 let spotifyRefreshToken = null;
 let spotifyExpiresAt = 0;
 
+// Persist & restore Spotify session so button hides after reload
+function persistSpotifySession(){
+  try {
+    sessionStorage.setItem('spotifySession', JSON.stringify({
+      access_token: spotifyAccessToken,
+      refresh_token: spotifyRefreshToken,
+      expires_at: spotifyExpiresAt
+    }));
+  } catch(e){ console.error('Persist error', e); }
+}
+async function restoreSpotifySession(){
+  const raw = sessionStorage.getItem('spotifySession');
+  if(!raw) return;
+  try {
+    const data = JSON.parse(raw);
+    if(data.access_token && data.expires_at){
+      spotifyAccessToken = data.access_token;
+      spotifyRefreshToken = data.refresh_token;
+      spotifyExpiresAt = data.expires_at;
+      // Refresh early if near expiry
+      if(Date.now() > spotifyExpiresAt - 60000 && spotifyRefreshToken){
+        await refreshSpotifyToken();
+      }
+      activateSpotifyUI();
+      fetchCurrentTrack();
+      setInterval(fetchCurrentTrack, 15000);
+    }
+  } catch(e){ console.error('Restore error', e); }
+}
+function activateSpotifyUI(){
+  const btn = document.getElementById('spotify-login-btn');
+  if(btn) btn.hidden = true;
+  const playerActive = document.querySelector('.spotify-player-active');
+  if(playerActive) playerActive.hidden = false;
+}
+
 const API_BASE = (document.querySelector('meta[name="api-base"]')?.content || '').trim() || '';
 
 window.addEventListener('load', () => {
@@ -11,7 +47,8 @@ window.addEventListener('load', () => {
     document.getElementById('loading-screen').classList.add('hidden');
     document.getElementById('main-app').classList.add('visible');
   }, 2500);
-  handleSpotifyRedirect();
+  // Try restore existing session before handling redirect with new code
+  restoreSpotifySession().then(() => handleSpotifyRedirect());
 });
 
 // Removed buildSpotifyAuthUrl: server builds secure URL at /spotify-login
@@ -35,11 +72,13 @@ async function exchangeSpotifyCode(code){
     spotifyAccessToken = data.access_token;
     spotifyRefreshToken = data.refresh_token;
     spotifyExpiresAt = Date.now() + (data.expires_in*1000);
-    document.getElementById('spotify-login-btn').hidden = true;
-    document.querySelector('.spotify-player-active').hidden = false;
+    persistSpotifySession();
+    activateSpotifyUI();
     await checkDevices();
     fetchCurrentTrack();
     setInterval(fetchCurrentTrack, 15000);
+    // Remove code param from URL for cleanliness
+    try { const u=new URL(location.href); u.searchParams.delete('code'); history.replaceState({},'',u.toString()); } catch(_e){}
   }catch(e){
     toast('Spotify auth error','error');
     console.error(e);
@@ -58,6 +97,7 @@ async function refreshSpotifyToken(){
     const d = await res.json();
     spotifyAccessToken = d.access_token;
     spotifyExpiresAt = Date.now() + (d.expires_in*1000);
+    persistSpotifySession();
   }catch(e){
     console.error(e);
   }
