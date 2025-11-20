@@ -61,10 +61,9 @@ function spotifyLogout() {
   spotifyAccessToken = null;
   spotifyRefreshToken = null;
   spotifyExpiresAt = 0;
-  try {
-    sessionStorage.removeItem('spotifySession');
-  } catch(e) { console.error('Logout error', e); }
+  try { sessionStorage.removeItem('spotifySession'); } catch(e) { console.error('Logout error', e); }
   deactivateSpotifyUI();
+  trackSpotify('logout');
   toast('Spotify disconnected', 'success');
 }
 
@@ -261,6 +260,7 @@ input.addEventListener('keydown', (e) => {
 const spotifyLoginBtn = document.getElementById('spotify-login-btn');
 if(spotifyLoginBtn){
   spotifyLoginBtn.addEventListener('click', () => {
+    trackSpotify('login_click');
     window.location.href = (API_BASE||'') + '/spotify-login';
   });
 }
@@ -283,12 +283,13 @@ if(pasteBtn) {
   });
 }
 
+// Spotify control buttons single declaration
 const spPlay = document.getElementById('sp-play');
 const spNext = document.getElementById('sp-next');
 const spPrev = document.getElementById('sp-prev');
-if(spPlay) spPlay.addEventListener('click', spotifyTogglePlay);
-if(spNext) spNext.addEventListener('click', spotifyNext);
-if(spPrev) spPrev.addEventListener('click', spotifyPrev);
+if(spPlay) spPlay.addEventListener('click', ()=>{ trackSpotify('toggle_play'); spotifyTogglePlay(); });
+if(spNext) spNext.addEventListener('click', ()=>{ trackSpotify('next'); spotifyNext(); });
+if(spPrev) spPrev.addEventListener('click', ()=>{ trackSpotify('prev'); spotifyPrev(); });
 
 function toast(msg,type='error'){
   const c=document.getElementById('toast-container');
@@ -399,6 +400,7 @@ function addMessage(text, role, saveToHistory=true) {
   // Save to history if needed
   if(saveToHistory) {
     saveChatMessage(text, role);
+    trackMessage(role, text.length);
   }
 
   if (role === 'bot') {
@@ -581,6 +583,7 @@ function showHistoryPanel(history){
     content.appendChild(row);
   });
   panel.style.display='block';
+  trackHistoryOpen(history.length);
   toast('📜 History opened','success');
 }
 function hideHistoryPanel(){
@@ -597,6 +600,7 @@ function toggleTheme() {
   const newTheme = currentTheme === 'light' ? 'dark' : 'light';
   document.documentElement.setAttribute('data-theme', newTheme);
   localStorage.setItem('theme', newTheme);
+  trackThemeChange(newTheme);
   toast(`${newTheme === 'light' ? '☀️' : '🌙'} ${newTheme.charAt(0).toUpperCase() + newTheme.slice(1)} mode activated`, 'success');
 }
 
@@ -726,6 +730,79 @@ function attachQuickActionListeners() {
         setTimeout(() => sendMessage(), 300);
       }
     });
+  });
+}
+
+// ========================================
+// Google Analytics Events (requires GA ID in HTML meta)
+// ========================================
+
+const GA_ID = document.querySelector('meta[name="ga-id"]')?.content || '';
+function gaEvent(name, params={}){
+  try {
+    if(typeof gtag === 'function' && GA_ID){
+      gtag('event', name, params);
+    }
+  } catch(e){ console.warn('GA event error', e); }
+}
+
+// Hook into existing actions
+function trackMessage(role, length){ gaEvent('chat_message', { role, length }); }
+function trackThemeChange(theme){ gaEvent('theme_toggle', { theme }); }
+function trackSpotify(action){ gaEvent('spotify_action', { action }); }
+function trackHistoryOpen(count){ gaEvent('history_open', { count }); }
+
+// Integrations in existing functions
+// Message send
+document.getElementById('send-btn').addEventListener('click', () => {
+  const text = input.value.trim();
+  if(text) {
+    trackMessage('user', text.length);
+  }
+});
+
+// Theme toggle
+const themeBtn = document.getElementById('theme-toggle-btn');
+if(themeBtn) {
+  themeBtn.addEventListener('click', () => {
+    const currentTheme = document.documentElement.getAttribute('data-theme') || 'dark';
+    trackThemeChange(currentTheme === 'light' ? 'dark' : 'light');
+  });
+}
+
+// Spotify actions
+const spotifyLogoutBtn = document.getElementById('spotify-logout-btn');
+if(spotifyLogoutBtn) {
+  spotifyLogoutBtn.addEventListener('click', () => {
+    trackSpotify('logout');
+  });
+}
+const spPlay = document.getElementById('sp-play');
+if(spPlay) {
+  spPlay.addEventListener('click', () => {
+    const isPaused = spPlay.innerHTML.includes('M8 5v14l11-7z');
+    trackSpotify(isPaused ? 'play' : 'pause');
+  });
+}
+const spNext = document.getElementById('sp-next');
+if(spNext) {
+  spNext.addEventListener('click', () => {
+    trackSpotify('next');
+  });
+}
+const spPrev = document.getElementById('sp-prev');
+if(spPrev) {
+  spPrev.addEventListener('click', () => {
+    trackSpotify('previous');
+  });
+}
+
+// History view
+const historyBtnForTracking = document.getElementById('history-btn');
+if(historyBtnForTracking){
+  historyBtnForTracking.addEventListener('click', () => {
+    const history = getChatHistory();
+    trackHistoryOpen(history.length);
   });
 }
 
