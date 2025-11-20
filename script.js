@@ -107,7 +107,8 @@ function updateSpotifyUI(data){
   const artist = document.getElementById('spotify-artist');
   const albumImg = document.getElementById('spotify-album');
   const playBtn = document.getElementById('sp-play');
-  if(!title || !artist || !albumImg || !playBtn) return; // guard if UI not rendered
+  if(!title || !artist || !albumImg || !playBtn) return;
+  
   const isPlaying = data.is_playing;
   title.textContent = data.item?.name || '';
   artist.textContent = (data.item?.artists||[]).map(a=>a.name).join(', ');
@@ -115,16 +116,24 @@ function updateSpotifyUI(data){
   const img = data.item?.album?.images?.[1] || data.item?.album?.images?.[0];
   if(img) albumImg.src = img.url;
 
-  playBtn.textContent = isPlaying ? '⏸' : '▶';
+  // Update play/pause button with SVG
+  if(isPlaying) {
+    playBtn.innerHTML = '<svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><rect x="6" y="4" width="4" height="16"/><rect x="14" y="4" width="4" height="16"/></svg>';
+  } else {
+    playBtn.innerHTML = '<svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>';
+  }
 }
 
 async function spotifyTogglePlay(){
   if(!spotifyAccessToken) return;
   try{
-    const endpoint = 'https://api.spotify.com/v1/me/player/' + (document.getElementById('sp-play').textContent === '▶' ? 'play':'pause');
+    // Check if currently playing by looking at button's SVG content
+    const playBtn = document.getElementById('sp-play');
+    const isPaused = playBtn.innerHTML.includes('M8 5v14l11-7z'); // play icon = paused state
+    const endpoint = 'https://api.spotify.com/v1/me/player/' + (isPaused ? 'play' : 'pause');
     const res = await spotifyFetch(endpoint,{ method:'PUT' });
     if(res.status === 403){ if(!notifiedPremium){ toast('Playback controls require Spotify Premium.','error'); notifiedPremium=true; } return; }
-    if(res.status === 204 || res.ok){ fetchCurrentTrack(); }
+    if(res.status === 204 || res.ok){ setTimeout(fetchCurrentTrack, 300); }
   }catch(e){ console.error(e); }
 }
 
@@ -268,9 +277,20 @@ function addMessage(text, role) {
   const messageDiv = document.createElement('div');
   messageDiv.className = `message ${role}`;
   messageDiv.setAttribute('aria-label', role==='user'? 'User message':'Bot response');
+  
   const avatar = document.createElement('div');
   avatar.className = 'message-avatar';
-  avatar.textContent = role === 'user' ? '👤' : '🤖';
+  
+  // Use image avatars instead of emojis
+  const avatarImg = document.createElement('img');
+  avatarImg.src = role === 'user' ? 'screenshot.png' : 'c.jpg';
+  avatarImg.alt = role === 'user' ? 'User avatar' : 'Bot avatar';
+  avatarImg.style.width = '100%';
+  avatarImg.style.height = '100%';
+  avatarImg.style.objectFit = 'cover';
+  avatarImg.style.borderRadius = 'var(--radius-md)';
+  avatar.appendChild(avatarImg);
+  
   const content = document.createElement('div');
   content.className = 'message-content';
   const bubble = document.createElement('div');
