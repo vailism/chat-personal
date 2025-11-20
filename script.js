@@ -299,3 +299,54 @@ function hideTyping() {
   const typing = document.getElementById('typing');
   if (typing) typing.remove();
 }
+
+// Add cut/copy/paste buttons to input area
+const inputWrapper = document.querySelector('.input-wrapper');
+if(inputWrapper){
+  const btnGroup = document.createElement('div');
+  btnGroup.className = 'ccp-btn-group';
+  btnGroup.style = 'display:flex;gap:8px;align-items:center;margin-right:8px;';
+
+  const cutBtn = document.createElement('button');
+  cutBtn.type = 'button';
+  cutBtn.className = 'ccp-btn';
+  cutBtn.setAttribute('aria-label','Cut');
+  cutBtn.textContent = '✂️';
+  cutBtn.onclick = () => {
+    input.select();
+    document.execCommand('cut');
+    toast('Cut to clipboard','success');
+  };
+
+  const copyBtn = document.createElement('button');
+  copyBtn.type = 'button';
+  copyBtn.className = 'ccp-btn';
+  copyBtn.setAttribute('aria-label','Copy');
+  copyBtn.textContent = '📋';
+  copyBtn.onclick = () => {
+    input.select();
+    document.execCommand('copy');
+    toast('Copied to clipboard','success');
+  };
+
+  const pasteBtn = document.createElement('button');
+  pasteBtn.type = 'button';
+  pasteBtn.className = 'ccp-btn';
+  pasteBtn.setAttribute('aria-label','Paste');
+  pasteBtn.textContent = '📥';
+  pasteBtn.onclick = async () => {
+    try {
+      const text = await navigator.clipboard.readText();
+      input.value += text;
+      input.dispatchEvent(new Event('input'));
+      toast('Pasted from clipboard','success');
+    } catch(e){
+      toast('Paste failed','error');
+    }
+  };
+
+  btnGroup.appendChild(cutBtn);
+  btnGroup.appendChild(copyBtn);
+  btnGroup.appendChild(pasteBtn);
+  inputWrapper.insertBefore(btnGroup, inputWrapper.firstChild);
+}
