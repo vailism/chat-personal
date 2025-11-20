@@ -40,6 +40,30 @@ function activateSpotifyUI(){
   if(playerActive) playerActive.hidden = false;
 }
 
+function deactivateSpotifyUI() {
+  const btn = document.getElementById('spotify-login-btn');
+  if(btn) btn.hidden = false;
+  const playerActive = document.querySelector('.spotify-player-active');
+  if(playerActive) playerActive.hidden = true;
+  const title = document.getElementById('spotify-title');
+  const artist = document.getElementById('spotify-artist');
+  const albumImg = document.getElementById('spotify-album');
+  if(title) title.textContent = 'Not Connected';
+  if(artist) artist.textContent = 'Connect to see your music';
+  if(albumImg) albumImg.src = '';
+}
+
+function spotifyLogout() {
+  spotifyAccessToken = null;
+  spotifyRefreshToken = null;
+  spotifyExpiresAt = 0;
+  try {
+    sessionStorage.removeItem('spotifySession');
+  } catch(e) { console.error('Logout error', e); }
+  deactivateSpotifyUI();
+  toast('Spotify disconnected', 'success');
+}
+
 const API_BASE = (document.querySelector('meta[name="api-base"]')?.content || '').trim() || '';
 
 window.addEventListener('load', () => {
@@ -104,6 +128,8 @@ async function refreshSpotifyToken(){
     persistSpotifySession();
   }catch(e){
     console.error(e);
+    // If refresh fails, log out
+    spotifyLogout();
   }
 }
 
@@ -114,6 +140,11 @@ async function spotifyFetch(endpoint, opts={}){
   let res = await fetch(endpoint, { ...opts, headers: { ...(opts.headers||{}), Authorization: 'Bearer '+spotifyAccessToken } });
   if(res.status === 401){
     await refreshSpotifyToken();
+    // Check if refresh worked
+    if (!spotifyAccessToken || Date.now() > spotifyExpiresAt) {
+      spotifyLogout();
+      throw new Error('Spotify session expired. Please log in again.');
+    }
     res = await fetch(endpoint, { ...opts, headers: { ...(opts.headers||{}), Authorization: 'Bearer '+spotifyAccessToken } });
   }
   return res;
@@ -637,4 +668,8 @@ function initializeFeatures() {
   // Theme toggle button
   const themeBtn = document.getElementById('theme-toggle-btn');
   if(themeBtn) themeBtn.addEventListener('click', toggleTheme);
+
+  // Spotify logout button
+  const spotifyLogoutBtn = document.getElementById('spotify-logout-btn');
+  if(spotifyLogoutBtn) spotifyLogoutBtn.addEventListener('click', spotifyLogout);
 }
