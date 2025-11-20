@@ -76,67 +76,9 @@
     </div>
 
     <div class="input-area">
-      <div class="input-wrapper">
-        <textarea 
-          id="message-input" 
-          placeholder="Ask me anything..." 
-          rows="1"
-          aria-label="Type your message"
-          autocomplete="off"
-          autocorrect="off"
-          autocapitalize="off"
-          spellcheck="false"
-          data-gramm="false"
-          data-ms-editor="false"
-          data-1p-ignore="true"
-          data-lpignore="true"
-        ></textarea>
-        <button id="send-btn" aria-label="Send message" type="button">
-          <span class="send-icon" aria-hidden="true">↑</span>
-          <span class="spinner" aria-hidden="true"></span>
-        </button>
-      </div>
-    </div>
-
-  </div>
-</div>
-
-<script src="script.js?v=20251116"></script>
-<script>
-(function(){
-  const observer = new MutationObserver(mutations => {
-    mutations.forEach(m => {
-      m.addedNodes.forEach(node => {
-        if(node.classList && node.classList.contains('message')){
-          const avatar = node.querySelector('.message-avatar');
-          if(avatar){
-            if(node.classList.contains('bot')){
-              if(!avatar.querySelector('img')){
-                avatar.textContent='';
-                const img=document.createElement('img');
-                img.src='c.jpg';
-                img.alt='Bot avatar';
-                img.className='bot-avatar-img';
-                avatar.appendChild(img);
-              }
-            } else if(node.classList.contains('user')) {
-              if(!avatar.querySelector('img')){
-                avatar.textContent='';
-                const img=document.createElement('img');
-                img.src='screenshot.png';
-                img.alt='User avatar';
-                img.style='width:100%;height:100%;object-fit:cover;border-radius:inherit;';
-                avatar.appendChild(img);
-              }
-            }
-          }
-        }
-      });
-    });
-  });
-  observer.observe(document.getElementById('messages'),{childList:true});
-})();
-</script>
-
-</body>
-</html>
+      <div class="input-wrapper" style="position:relative;">
+        <span class="input-accent">
+          <svg width="54" height="54" viewBox="0 0 54 54" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+            <ellipse cx="27" cy="27" rx="22" ry="14" fill="url(#accentGradient)" opacity="0.7"/>
+            <defs>
+              <linearGradient id="accentGradient" x1="0" y1="0" x2="54" y2="54" gradientUnits="userSpace

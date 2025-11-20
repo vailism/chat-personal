@@ -205,6 +205,49 @@ body::after{
 .sp-btn{background:rgba(255,255,255,0.08);border:1px solid rgba(255,255,255,0.14);color:#fff;width:32px;height:32px;border-radius:50%;cursor:pointer;font-size:14px;display:flex;align-items:center;justify-content:center;transition:var(--transition-base);}
 .sp-btn:hover{background:rgba(255,255,255,0.18);transform:scale(1.07);}
 .sp-btn:active{transform:scale(.92);}
+s.ccp-btn {
+  background: rgba(255,255,255,0.08);
+  border: 1px solid rgba(255,255,255,0.14);
+  color: #fff;
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  cursor: pointer;
+  font-size: 16px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: box-shadow 0.3s, transform 0.3s;
+  box-shadow: 0 2px 8px -2px var(--panel-glow);
+  position: relative;
+}
+.ccp-btn:hover {
+  box-shadow: 0 0 0 6px var(--accent-4), 0 10px 30px -6px var(--panel-glow);
+  transform: scale(1.12);
+}
+.input-wrapper:focus-within {
+  border-image: linear-gradient(90deg, var(--accent-1), var(--accent-4)) 1;
+  border-width: 2px;
+  border-style: solid;
+  box-shadow: 0 0 0 6px var(--accent-3);
+}
+.input-accent {
+  position: absolute;
+  right: 18px;
+  bottom: 18px;
+  width: 54px;
+  height: 54px;
+  pointer-events: none;
+  z-index: 2;
+  animation: accentFloat 4s ease-in-out infinite;
+}
+@keyframes accentFloat {
+  0%,100% { transform: translateY(0) scale(1); opacity: 0.7; }
+  50% { transform: translateY(-10px) scale(1.08); opacity: 1; }
+}
+.input-accent svg {
+  filter: blur(2px) brightness(1.2);
+}
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { animation-duration: 0.01ms !important; animation-iteration-count: 1 !important; transition: none !important; }
 }

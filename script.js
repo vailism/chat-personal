@@ -307,33 +307,11 @@ if(inputWrapper){
   btnGroup.className = 'ccp-btn-group';
   btnGroup.style = 'display:flex;gap:8px;align-items:center;margin-right:8px;';
 
-  const cutBtn = document.createElement('button');
-  cutBtn.type = 'button';
-  cutBtn.className = 'ccp-btn';
-  cutBtn.setAttribute('aria-label','Cut');
-  cutBtn.textContent = '✂️';
-  cutBtn.onclick = () => {
-    input.select();
-    document.execCommand('cut');
-    toast('Cut to clipboard','success');
-  };
-
-  const copyBtn = document.createElement('button');
-  copyBtn.type = 'button';
-  copyBtn.className = 'ccp-btn';
-  copyBtn.setAttribute('aria-label','Copy');
-  copyBtn.textContent = '📋';
-  copyBtn.onclick = () => {
-    input.select();
-    document.execCommand('copy');
-    toast('Copied to clipboard','success');
-  };
-
   const pasteBtn = document.createElement('button');
   pasteBtn.type = 'button';
   pasteBtn.className = 'ccp-btn';
   pasteBtn.setAttribute('aria-label','Paste');
-  pasteBtn.textContent = '📥';
+  pasteBtn.innerHTML = `<svg width="20" height="20" viewBox="0 0 512 512" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true"><path d="M320 264c0-13.255-10.745-24-24-24h-80c-13.255 0-24 10.745-24 24v24c0 13.255 10.745 24 24 24h80c13.255 0 24-10.745 24-24v-24z" fill="#000"/><path d="M432 320v112c0 17.673-14.327 32-32 32H112c-17.673 0-32-14.327-32-32V320" stroke="#000" stroke-width="32" stroke-linecap="round" stroke-linejoin="round"/><path d="M320 264c0-13.255-10.745-24-24-24h-80c-13.255 0-24 10.745-24 24v24c0 13.255 10.745 24 24 24h80c13.255 0 24-10.745 24-24v-24z" stroke="#000" stroke-width="32" stroke-linecap="round" stroke-linejoin="round"/><path d="M432 320v112c0 17.673-14.327 32-32 32H112c-17.673 0-32-14.327-32-32V320" fill="none" stroke="#000" stroke-width="32" stroke-linecap="round" stroke-linejoin="round"/><path d="M256 176v160" stroke="#000" stroke-width="32" stroke-linecap="round" stroke-linejoin="round"/><path d="M176 176h160" stroke="#000" stroke-width="32" stroke-linecap="round" stroke-linejoin="round"/></svg>`;
   pasteBtn.onclick = async () => {
     try {
       const text = await navigator.clipboard.readText();
@@ -345,8 +323,6 @@ if(inputWrapper){
     }
   };
 
-  btnGroup.appendChild(cutBtn);
-  btnGroup.appendChild(copyBtn);
   btnGroup.appendChild(pasteBtn);
   inputWrapper.insertBefore(btnGroup, inputWrapper.firstChild);
 }
