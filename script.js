@@ -69,14 +69,25 @@ function spotifyLogout() {
 
 const API_BASE = (document.querySelector('meta[name="api-base"]')?.content || '').trim() || '';
 
+const LOADING_MAX_DURATION = 5000; // ms fallback
+function hideLoadingScreen(){
+  const ls = document.getElementById('loading-screen');
+  const app = document.getElementById('main-app');
+  if(ls && !ls.classList.contains('hidden')) ls.classList.add('hidden');
+  if(app && !app.classList.contains('visible')) app.classList.add('visible');
+}
+
+// Fallback: force hide after max duration
+setTimeout(hideLoadingScreen, LOADING_MAX_DURATION);
+
+document.addEventListener('DOMContentLoaded', () => {
+  // In case window 'load' waits for blocked resources
+  setTimeout(hideLoadingScreen, 1200);
+});
+
 window.addEventListener('load', () => {
-  setTimeout(() => {
-    document.getElementById('loading-screen').classList.add('hidden');
-    document.getElementById('main-app').classList.add('visible');
-  }, 2500);
-  // Try restore existing session before handling redirect with new code
-  restoreSpotifySession().then(() => handleSpotifyRedirect());
-  // Restore chat history and theme
+  setTimeout(hideLoadingScreen, 400); // quicker now
+  restoreSpotifySession().then(() => handleSpotifyRedirect()).catch(()=>{});
   restoreChatHistory();
   restoreTheme();
   initializeFeatures();
@@ -283,13 +294,18 @@ if(pasteBtn) {
   });
 }
 
-// Spotify control buttons single declaration
+// Spotify control buttons single declaration (with GA tracking integrated)
 const spPlay = document.getElementById('sp-play');
 const spNext = document.getElementById('sp-next');
 const spPrev = document.getElementById('sp-prev');
-if(spPlay) spPlay.addEventListener('click', ()=>{ trackSpotify('toggle_play'); spotifyTogglePlay(); });
+if(spPlay) spPlay.addEventListener('click', ()=>{ 
+  // Determine state for accurate GA event (icon path check heuristic)
+  const isPaused = spPlay.innerHTML.includes('M8 5v14l11-7z');
+  trackSpotify(isPaused ? 'play' : 'pause');
+  spotifyTogglePlay(); 
+});
 if(spNext) spNext.addEventListener('click', ()=>{ trackSpotify('next'); spotifyNext(); });
-if(spPrev) spPrev.addEventListener('click', ()=>{ trackSpotify('prev'); spotifyPrev(); });
+if(spPrev) spPrev.addEventListener('click', ()=>{ trackSpotify('previous'); spotifyPrev(); });
 
 function toast(msg,type='error'){
   const c=document.getElementById('toast-container');
@@ -770,39 +786,11 @@ if(themeBtn) {
   });
 }
 
-// Spotify actions
+// Spotify actions (removed duplicate variable declarations; listeners already attached above)
 const spotifyLogoutBtn = document.getElementById('spotify-logout-btn');
 if(spotifyLogoutBtn) {
   spotifyLogoutBtn.addEventListener('click', () => {
     trackSpotify('logout');
-  });
-}
-const spPlay = document.getElementById('sp-play');
-if(spPlay) {
-  spPlay.addEventListener('click', () => {
-    const isPaused = spPlay.innerHTML.includes('M8 5v14l11-7z');
-    trackSpotify(isPaused ? 'play' : 'pause');
-  });
-}
-const spNext = document.getElementById('sp-next');
-if(spNext) {
-  spNext.addEventListener('click', () => {
-    trackSpotify('next');
-  });
-}
-const spPrev = document.getElementById('sp-prev');
-if(spPrev) {
-  spPrev.addEventListener('click', () => {
-    trackSpotify('previous');
-  });
-}
-
-// History view
-const historyBtnForTracking = document.getElementById('history-btn');
-if(historyBtnForTracking){
-  historyBtnForTracking.addEventListener('click', () => {
-    const history = getChatHistory();
-    trackHistoryOpen(history.length);
   });
 }
 
