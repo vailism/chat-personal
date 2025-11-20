@@ -49,6 +49,10 @@ window.addEventListener('load', () => {
   }, 2500);
   // Try restore existing session before handling redirect with new code
   restoreSpotifySession().then(() => handleSpotifyRedirect());
+  // Restore chat history and theme
+  restoreChatHistory();
+  restoreTheme();
+  initializeFeatures();
 });
 
 // Removed buildSpotifyAuthUrl: server builds secure URL at /spotify-login
@@ -227,24 +231,22 @@ if(spotifyLoginBtn){
 }
 
 // Paste button functionality
-document.addEventListener('DOMContentLoaded', () => {
-  const pasteBtn = document.querySelector('.input-action-btn');
-  if(pasteBtn) {
-    pasteBtn.addEventListener('click', async () => {
-      try {
-        const text = await navigator.clipboard.readText();
-        const input = document.getElementById('message-input');
-        if(input) {
-          input.value += text;
-          input.dispatchEvent(new Event('input'));
-          toast('Pasted from clipboard', 'success');
-        }
-      } catch(e) {
-        toast('Paste failed', 'error');
+const pasteBtn = document.getElementById('paste-btn');
+if(pasteBtn) {
+  pasteBtn.addEventListener('click', async () => {
+    try {
+      const text = await navigator.clipboard.readText();
+      const input = document.getElementById('message-input');
+      if(input) {
+        input.value += text;
+        input.dispatchEvent(new Event('input'));
+        toast('📋 Pasted from clipboard', 'success');
       }
-    });
-  }
-});
+    } catch(e) {
+      toast('Paste failed', 'error');
+    }
+  });
+}
 
 const spPlay = document.getElementById('sp-play');
 const spNext = document.getElementById('sp-next');
@@ -312,7 +314,7 @@ async function callAPI(prompt) {
   }
 }
 
-function addMessage(text, role) {
+function addMessage(text, role, saveToHistory=true) {
   const messagesDiv = document.getElementById('messages');
   const messageDiv = document.createElement('div');
   messageDiv.className = `message ${role}`;
@@ -337,9 +339,32 @@ function addMessage(text, role) {
   bubble.className = 'message-bubble';
   bubble.setAttribute('role','article');
   bubble.setAttribute('tabindex','0');
+  
+  // Add message actions
+  const actions = document.createElement('div');
+  actions.className = 'message-actions';
+  const copyBtn = document.createElement('button');
+  copyBtn.className = 'msg-action-btn';
+  copyBtn.setAttribute('aria-label', 'Copy message');
+  copyBtn.innerHTML = `<svg width="16" height="16" viewBox="0 0 24 24" fill="none"><path d="M8 4v12a2 2 0 002 2h8a2 2 0 002-2V7.242a2 2 0 00-.602-1.43L16.083 2.57A2 2 0 0014.685 2H10a2 2 0 00-2 2z" stroke="currentColor" stroke-width="2"/><path d="M16 18v2a2 2 0 01-2 2H6a2 2 0 01-2-2V9a2 2 0 012-2h2" stroke="currentColor" stroke-width="2"/></svg>`;
+  copyBtn.addEventListener('click', () => {
+    navigator.clipboard.writeText(text).then(() => {
+      toast('📋 Message copied', 'success');
+    }).catch(() => {
+      toast('Copy failed', 'error');
+    });
+  });
+  actions.appendChild(copyBtn);
+  content.appendChild(actions);
+  
   const time = document.createElement('div');
   time.className = 'message-time';
   time.textContent = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+
+  // Save to history if needed
+  if(saveToHistory) {
+    saveChatMessage(text, role);
+  }
 
   if (role === 'bot') {
     let i = 0; const speed = 12;
@@ -398,3 +423,218 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   }
 });
+
+// ========================================
+// Chat History Persistence
+// ========================================
+
+function saveChatMessage(text, role) {
+  try {
+    const history = JSON.parse(localStorage.getItem('chatHistory') || '[]');
+    history.push({ text, role, timestamp: Date.now() });
+    // Keep last 100 messages
+    if(history.length > 100) history.shift();
+    localStorage.setItem('chatHistory', JSON.stringify(history));
+  } catch(e) { console.error('Save message error', e); }
+}
+
+function restoreChatHistory() {
+  try {
+    const history = JSON.parse(localStorage.getItem('chatHistory') || '[]');
+    if(history.length > 0) {
+      const welcome = document.querySelector('.welcome-card');
+      if(welcome) welcome.remove();
+      history.forEach(msg => addMessage(msg.text, msg.role, false));
+    }
+  } catch(e) { console.error('Restore history error', e); }
+}
+
+function clearChatHistory() {
+  if(confirm('Clear all chat messages? This cannot be undone.')) {
+    localStorage.removeItem('chatHistory');
+    const messagesDiv = document.getElementById('messages');
+    messagesDiv.innerHTML = '';
+    // Re-add welcome card
+    messagesDiv.innerHTML = `
+      <div class="welcome-card" aria-label="Welcome message">
+        <div class="welcome-icon-modern">
+          <svg width="48" height="48" viewBox="0 0 24 24" fill="none">
+            <path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5" stroke="url(#welcomeGradient)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+            <defs>
+              <linearGradient id="welcomeGradient" x1="0" y1="0" x2="24" y2="24">
+                <stop stop-color="#667eea"/>
+                <stop offset="1" stop-color="#764ba2"/>
+              </linearGradient>
+            </defs>
+          </svg>
+        </div>
+        <h2 class="welcome-title">Welcome to Anand AI</h2>
+        <p class="welcome-desc">Your intelligent assistant powered by advanced AI. Ask me anything, and I'll do my best to help!</p>
+        <div class="quick-actions">
+          <div class="quick-action-chip" data-prompt="Give me 5 creative project ideas for a web developer">💡 Get Ideas</div>
+          <div class="quick-action-chip" data-prompt="Explain how to analyze user data effectively with privacy in mind">📊 Analyze Data</div>
+          <div class="quick-action-chip" data-prompt="Help me write engaging content for a tech blog">✍️ Write Content</div>
+        </div>
+      </div>`;
+    attachQuickActionListeners();
+    toast('Chat cleared', 'success');
+  }
+}
+
+// ========================================
+// Theme Management
+// ========================================
+
+function toggleTheme() {
+  const currentTheme = document.documentElement.getAttribute('data-theme');
+  const newTheme = currentTheme === 'light' ? 'dark' : 'light';
+  document.documentElement.setAttribute('data-theme', newTheme);
+  localStorage.setItem('theme', newTheme);
+  toast(`${newTheme === 'light' ? '☀️' : '🌙'} ${newTheme.charAt(0).toUpperCase() + newTheme.slice(1)} mode`, 'success');
+}
+
+function restoreTheme() {
+  const savedTheme = localStorage.getItem('theme');
+  if(savedTheme) {
+    document.documentElement.setAttribute('data-theme', savedTheme);
+  } else {
+    // Auto-detect system preference
+    const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+    document.documentElement.setAttribute('data-theme', prefersDark ? 'dark' : 'light');
+  }
+}
+
+// ========================================
+// Keyboard Shortcuts
+// ========================================
+
+document.addEventListener('keydown', (e) => {
+  // Ctrl/Cmd + K: Focus input
+  if((e.ctrlKey || e.metaKey) && e.key === 'k') {
+    e.preventDefault();
+    document.getElementById('message-input').focus();
+    toast('💬 Input focused', 'success');
+  }
+  // Ctrl/Cmd + L: Clear chat
+  if((e.ctrlKey || e.metaKey) && e.key === 'l') {
+    e.preventDefault();
+    clearChatHistory();
+  }
+  // Escape: Blur input
+  if(e.key === 'Escape') {
+    document.getElementById('message-input').blur();
+  }
+});
+
+// ========================================
+// Voice Input
+// ========================================
+
+function initializeVoiceInput() {
+  const voiceBtn = document.getElementById('voice-btn');
+  if(!voiceBtn) return;
+  
+  if('webkitSpeechRecognition' in window || 'SpeechRecognition' in window) {
+    const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+    const recognition = new SpeechRecognition();
+    recognition.continuous = false;
+    recognition.interimResults = false;
+    recognition.lang = 'en-US';
+    
+    voiceBtn.addEventListener('click', () => {
+      try {
+        recognition.start();
+        voiceBtn.classList.add('recording');
+        toast('🎤 Listening...', 'success');
+      } catch(e) {
+        console.error('Voice recognition error', e);
+        toast('Voice input already active', 'error');
+      }
+    });
+    
+    recognition.onresult = (e) => {
+      const transcript = e.results[0][0].transcript;
+      document.getElementById('message-input').value = transcript;
+      voiceBtn.classList.remove('recording');
+      toast('✅ Voice captured', 'success');
+      // Auto-focus input for editing
+      document.getElementById('message-input').focus();
+    };
+    
+    recognition.onerror = (e) => {
+      voiceBtn.classList.remove('recording');
+      if(e.error !== 'aborted' && e.error !== 'no-speech') {
+        toast('Voice input error: ' + e.error, 'error');
+      }
+    };
+    
+    recognition.onend = () => {
+      voiceBtn.classList.remove('recording');
+    };
+  } else {
+    voiceBtn.style.display = 'none';
+    console.warn('Speech recognition not supported');
+  }
+}
+
+// ========================================
+// Scroll to Bottom Button
+// ========================================
+
+function initializeScrollButton() {
+  const scrollBtn = document.getElementById('scroll-to-bottom');
+  const messagesDiv = document.getElementById('messages');
+  
+  if(!scrollBtn || !messagesDiv) return;
+  
+  // Show/hide based on scroll position
+  messagesDiv.addEventListener('scroll', () => {
+    const isNearBottom = messagesDiv.scrollHeight - messagesDiv.scrollTop - messagesDiv.clientHeight < 100;
+    scrollBtn.hidden = isNearBottom;
+  });
+  
+  // Scroll to bottom when clicked
+  scrollBtn.addEventListener('click', () => {
+    messagesDiv.scrollTo({
+      top: messagesDiv.scrollHeight,
+      behavior: 'smooth'
+    });
+  });
+}
+
+// ========================================
+// Quick Action Chips
+// ========================================
+
+function attachQuickActionListeners() {
+  document.querySelectorAll('.quick-action-chip').forEach(chip => {
+    chip.addEventListener('click', () => {
+      const prompt = chip.getAttribute('data-prompt');
+      if(prompt) {
+        const input = document.getElementById('message-input');
+        input.value = prompt;
+        input.focus();
+        // Auto-send after a brief delay
+        setTimeout(() => sendMessage(), 300);
+      }
+    });
+  });
+}
+
+// ========================================
+// Initialize All Features
+// ========================================
+
+function initializeFeatures() {
+  initializeVoiceInput();
+  initializeScrollButton();
+  attachQuickActionListeners();
+  
+  // Clear chat button
+  const clearBtn = document.getElementById('clear-chat-btn');
+  if(clearBtn) clearBtn.addEventListener('click', clearChatHistory);
+  
+  // Theme toggle button
+  const themeBtn = document.getElementById('theme-toggle-btn');
+  if(themeBtn) themeBtn.addEventListener('click', toggleTheme);
+}

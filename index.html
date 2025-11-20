@@ -28,7 +28,7 @@
 </div>
 
 <!-- Main Application -->
-<div id="main-app">
+<div id="main-app>
   <!-- Animated Background -->
   <div class="bg-gradient"></div>
   <div class="bg-mesh">
@@ -74,6 +74,20 @@
           <path d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" stroke="currentColor" stroke-width="2" stroke-linecap="round" fill="none"/>
         </svg>
         <span>History</span>
+      </button>
+      
+      <button class="nav-item" id="clear-chat-btn" type="button" aria-label="Clear chat">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
+          <path d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+        </svg>
+        <span>Clear Chat</span>
+      </button>
+      
+      <button class="nav-item" id="theme-toggle-btn" type="button" aria-label="Toggle theme">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
+          <path d="M21 12.79A9 9 0 1111.21 3 7 7 0 0021 12.79z" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+        </svg>
+        <span>Theme</span>
       </button>
     </nav>
 
@@ -164,17 +178,31 @@
         <h2 class="welcome-title">Welcome to Anand AI</h2>
         <p class="welcome-desc">Your intelligent assistant powered by advanced AI. Ask me anything, and I'll do my best to help!</p>
         <div class="quick-actions">
-          <div class="quick-action-chip">💡 Get Ideas</div>
-          <div class="quick-action-chip">📊 Analyze Data</div>
-          <div class="quick-action-chip">✍️ Write Content</div>
+          <div class="quick-action-chip" data-prompt="Give me 5 creative project ideas for a web developer">💡 Get Ideas</div>
+          <div class="quick-action-chip" data-prompt="Explain how to analyze user data effectively with privacy in mind">📊 Analyze Data</div>
+          <div class="quick-action-chip" data-prompt="Help me write engaging content for a tech blog">✍️ Write Content</div>
         </div>
       </div>
     </div>
+    
+    <!-- Scroll to Bottom Button -->
+    <button id="scroll-to-bottom" class="scroll-btn" hidden aria-label="Scroll to bottom">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
+        <path d="M7 10l5 5 5-5z"/>
+      </svg>
+    </button>
 
     <!-- Input Area -->
     <div class="input-section">
       <div class="input-container">
-        <button class="input-action-btn" type="button" aria-label="Paste">
+        <button class="input-action-btn" id="voice-btn" type="button" aria-label="Voice input">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
+            <path d="M12 1a3 3 0 00-3 3v8a3 3 0 006 0V4a3 3 0 00-3-3z" stroke="currentColor" stroke-width="2"/>
+            <path d="M19 10v2a7 7 0 01-14 0v-2M12 19v4M8 23h8" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+          </svg>
+        </button>
+        
+        <button class="input-action-btn" type="button" id="paste-btn" aria-label="Paste">
           <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
             <path d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
           </svg>
@@ -196,7 +224,7 @@
       </div>
       
       <div class="input-footer">
-        <span class="input-hint">Press Enter to send, Shift + Enter for new line</span>
+        <span class="input-hint">⌨️ Enter to send • Shift+Enter for new line • Ctrl+K to focus • Ctrl+L to clear</span>
       </div>
     </div>
   </main>
