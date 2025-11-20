@@ -34,15 +34,19 @@ async function restoreSpotifySession(){
   } catch(e){ console.error('Restore error', e); }
 }
 function activateSpotifyUI(){
-  const btn = document.getElementById('spotify-login-btn');
-  if(btn) btn.hidden = true;
+  const connectBtn = document.getElementById('spotify-login-btn');
+  if(connectBtn) connectBtn.hidden = true;
+  const logoutBtn = document.getElementById('spotify-logout-btn');
+  if(logoutBtn) logoutBtn.hidden = false;
   const playerActive = document.querySelector('.spotify-player-active');
   if(playerActive) playerActive.hidden = false;
 }
 
 function deactivateSpotifyUI() {
-  const btn = document.getElementById('spotify-login-btn');
-  if(btn) btn.hidden = false;
+  const connectBtn = document.getElementById('spotify-login-btn');
+  if(connectBtn) connectBtn.hidden = false;
+  const logoutBtn = document.getElementById('spotify-logout-btn');
+  if(logoutBtn) logoutBtn.hidden = true;
   const playerActive = document.querySelector('.spotify-player-active');
   if(playerActive) playerActive.hidden = true;
   const title = document.getElementById('spotify-title');
