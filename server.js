@@ -126,7 +126,8 @@ app.post('/spotify-refresh', async (req,res) => {
 });
 
 // Chat proxy (Gemini) - keep API key on server only
-const GEMINI_API_KEY = process.env.GEMINI_API_KEY;
+// Fallback to provided key if env var is missing (Note: Best practice is to use environment variables)
+const GEMINI_API_KEY = process.env.GEMINI_API_KEY || 'AIzaSyAJQjNRHP0oe0w4OJQKDWOGPI6Wl-dcYNg';
 const GEMINI_MODEL = process.env.GEMINI_MODEL || 'gemini-2.0-flash';
 
 async function generateWithGemini(prompt){
