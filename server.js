@@ -131,7 +131,9 @@ const GEMINI_API_KEY = process.env.GEMINI_API_KEY || 'AIzaSyAJQjNRHP0oe0w4OJQKDW
 const GEMINI_MODEL = process.env.GEMINI_MODEL || 'gemini-2.0-flash';
 
 async function generateWithGemini(prompt){
-  const endpoint = `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent?key=${encodeURIComponent(GEMINI_API_KEY)}`;
+  // Use gemini-1.5-flash as it is more stable and widely available than 2.0-flash
+  const model = GEMINI_MODEL === 'gemini-2.0-flash' ? 'gemini-1.5-flash' : GEMINI_MODEL;
+  const endpoint = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${encodeURIComponent(GEMINI_API_KEY)}`;
   const resp = await fetch(endpoint, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
