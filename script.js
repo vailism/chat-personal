@@ -354,10 +354,24 @@ async function callAPI(prompt) {
   try {
     const headers = { 'Content-Type': 'application/json' };
     let response = await fetch(url, { method: 'POST', headers, body: JSON.stringify(payload) });
-    if (response.status === 405) {
-      response = await fetch(`${url}?q=${encodeURIComponent(prompt)}`);
+    // If POST fails with 405 (Method Not Allowed) or 400 (Bad Request - possibly due to body parsing issues on some hosts), try GET fallback
+    if (response.status === 405 || response.status === 400) {
+      console.warn('POST failed, trying GET fallback');
+      // Ensure we don't double-encode or send malformed query
+      const getUrl = new URL(url);
+      getUrl.searchParams.set('q', prompt);
+      response = await fetch(getUrl.toString());
     }
-    if (!response.ok) throw new Error(`HTTP ${response.status}`);
+    if (!response.ok) {
+      // Try to parse error detail from JSON if possible
+      let errorDetail = `HTTP ${response.status}`;
+      try {
+        const errData = await response.json();
+        if(errData.error) errorDetail += `: ${errData.error}`;
+        if(errData.detail) errorDetail += ` (${errData.detail})`;
+      } catch(e){}
+      throw new Error(errorDetail);
+    }
     const data = await response.json();
     const text = data.text || data.candidates?.[0]?.content?.parts?.[0]?.text || 'No response available.';
     return text;
